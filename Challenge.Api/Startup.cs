@@ -1,16 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
+using Challenge.Api.AutoMapper;
+using Challenge.Infrastructure.Context;
+using Challenge.Infrastructure.IOC;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using System.IO;
+using System.Reflection;
+using System;
+using Challenge.Infrastructure.Middwares;
 
 namespace Challenge.Api
 {
@@ -23,21 +25,55 @@ namespace Challenge.Api
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+	
+		public void ConfigureServices(IServiceCollection services)
         {
 
-            services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Challenge.Api", Version = "v1" });
-            });
-        }
+			services.AddDbContext<SqliteContext>(options =>
+		        options.UseSqlite(Configuration.GetConnectionString("DefaultConnectionString")));
+			services.AddControllers();
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+			services.AddSwaggerGen(options =>
+			{
+				options.SwaggerDoc("v1", new OpenApiInfo
+				{
+					Version = "v1",
+					Title = "Challenge.Api",
+					Description = "Api do desafio",
+					TermsOfService = new Uri("https://example.com/terms"),
+					Contact = new OpenApiContact
+					{
+						Name = "Example Contact",
+						Url = new Uri("https://example.com/contact")
+					},
+					License = new OpenApiLicense
+					{
+						Name = "Example License",
+						Url = new Uri("https://example.com/license")
+					}
+				});
+
+
+		
+				var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+				var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+				options.IncludeXmlComments(xmlPath);
+			
+			});
+			
+			services.AddSingleton(AutoMapperConfig.RegisterMappings());
+
+			ConfigurationIOC.AddConfigurationIOC(services);
+
+		}
+
+		public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
+			app.UseSwagger(c =>
+			{
+				c.SerializeAsV2 = true;
+			});
+			if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
@@ -46,7 +82,9 @@ namespace Challenge.Api
 
             app.UseHttpsRedirection();
 
-            app.UseRouting();
+			app.UseMiddleware<ErrorHandlingMiddleware>();
+
+			app.UseRouting();
 
             app.UseAuthorization();
 

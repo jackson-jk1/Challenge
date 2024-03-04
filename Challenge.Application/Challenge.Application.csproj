@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Challenge.Api.Request\Challenge.Api.Request.csproj" />
     <ProjectReference Include="..\Challenge.Domain\Challenge.Domain.csproj" />
   </ItemGroup>
 
